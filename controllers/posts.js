@@ -1,6 +1,7 @@
 const posts = require("../db/db.json");
 const path = require("path");
 const fs = require("fs");
+const { kebabCase } = require("lodash");
 
 function index(req, res) {
     res.format({
@@ -50,6 +51,68 @@ function create(req, res) {
             res.status(406).send("Not Acceptable");
         }
     })
+};
+
+function store(req, res) {
+    res.format({
+        html: () => {
+            res.redirect("/");
+        },
+        default: () => {
+            posts.push({
+                ...req.body,
+                slug: kebabCase(req.body.title),
+                updatedAt: new Date().toISOString(),
+                image: req.file
+            });
+
+            const json = JSON.stringify(posts, null, 2);
+
+            fs.writeFileSync(path.resolve(__dirname, "..", "db", "db.json"), json)
+
+            res.json(posts[posts.length - 1]);
+        }
+    })
+
+};
+
+function destroy(req, res) {
+    res.format({
+        html: () => {
+            res.redirect("/");
+        },
+        default: () => {
+            const post = findOrFail(req, res);
+
+            const postIndex = posts.findIndex((_post) => _post.slug == post.slug);
+
+            posts.splice(postIndex, 1);
+
+            if (post.image) {
+                if (typeof post.image === "string") {
+                    const filePath = path.resolve(
+                        __dirname,
+                        "..",
+                        "public",
+                        "imgs",
+                        "posts",
+                        post.image
+                    );
+
+                    fs.unlinkSync(filePath);
+                } else {
+                    const filePath = path.resolve(__dirname, "..", post.image.path);
+
+                    fs.unlinkSync(filePath);
+                }
+            }
+            const json = JSON.stringify(posts, null, 2);
+            fs.writeFileSync(path.resolve(__dirname, "..", "db", "db.json"), json);
+
+            res.send("Post eliminato");
+        }
+    })
+
 };
 
 function showImage(req, res) {
@@ -107,6 +170,8 @@ module.exports = {
     index,
     show,
     create,
+    store,
+    destroy,
     showImage,
     downloadImage
 }

@@ -11,6 +11,8 @@ app.get("/", (req, res) => {
     res.send("Benvenuto nel mio blog!");
 });
 
+app.use(express.urlencoded({ extended: true }));
+
 app.use("/posts", postsRouter);
 
 app.listen(process.env.Port || 3000, () => {
